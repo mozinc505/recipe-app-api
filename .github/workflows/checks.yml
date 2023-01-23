@@ -6,16 +6,16 @@ on: [push] # S tem določimo, da gre za trigger, ki se zgodi, ko naredimo PUSH v
 jobs:
   test-lint: # To je ID job-a (se lahko tudi sklicuješ na ta ID, če slučajno rabiš)
     name: Test and Lint
-    runs-on: ubuntu-20.04 # To je runner (operacijski sistem) na katerem se bo ta job izvedel
+    runs-on: ubuntu-latest # To je runner (operacijski sistem) na katerem se bo ta job izvedel. Docker-compose je že predinštaliran.
     steps: 
       - name: Login to Docker Hub
-        uses: docker/login-action@v1 # To je github action (preddefiniran s strani github - v repositoriju)
+        uses: docker/login-action@v2 # To je github action (preddefiniran s strani github - v repositoriju)
         with: 
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Checkout #V tem testnem okolju se naredi checkout
-        uses: actions/checkout@v2 
+      - name: Checkout # V tem testnem okolju se naredi checkout (pomeni, da se postavimo na ta branch v git-u)
+        uses: actions/checkout@v3 
       - name: Test
-        run: docker-compose run --rm app sh -c "python manage.py test" #Ta ukaz izvede test v našem projektu
+        run: docker-compose run --rm app sh -c "python manage.py test" # Ta ukaz izvede test v našem projektu
       - name: Lint
-        run: docker-compost run --rm app sh -c "flake8"
+        run: docker-compose run --rm app sh -c "flake8"
