@@ -16,6 +16,6 @@ jobs:
       - name: Checkout # V tem testnem okolju se naredi checkout (pomeni, da se postavimo na ta branch v git-u)
         uses: actions/checkout@v3 
       - name: Test
-        run: docker-compose run --rm app sh -c "python manage.py test" # Ta ukaz izvede test v našem projektu
+        run: docker-compose run --rm app sh -c "python manage.py wait_for_db && python manage.py test" # Ta ukaz izvede test v našem projektu
       - name: Lint
         run: docker-compose run --rm app sh -c "flake8"
