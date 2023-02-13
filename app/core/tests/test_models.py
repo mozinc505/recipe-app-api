@@ -1,8 +1,12 @@
 """
 Tests for models.
 """
+from decimal import Decimal
+
 from django.test import TestCase
 from django.contrib.auth import get_user_model #Je dobro da uporabiš to metodo, da dobiš referenco do svojega custom user modela
+
+from core import models
 
 
 class ModelTests(TestCase):
@@ -47,4 +51,24 @@ class ModelTests(TestCase):
         self.assertTrue(user.is_superuser)
         self.assertTrue(user.is_staff)
 
+    #----------
+    #TESTS FOR RECIPE
+    #----------
+    def test_create_recipe(self):
+        """Test creating a reipe is successul."""
+
+        #Create a user so we can assign a recipe to that user (in our test)
+        user = get_user_model().objects.create_user(
+            'test@example.com',
+            'testpass123',
+        )
+        recipe = models.Recipe.objects.create(
+            user = user, #user, ki so smo v zgornjem koraku kreirali
+            title = 'Sample recipe name',
+            time_minutes=5,
+            price=Decimal('5.50'), #String to decimal
+            description='Sample recipe description',
+        )
+
+        self.assertEqual(str(recipe), recipe.title)
 

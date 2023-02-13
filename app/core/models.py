@@ -2,6 +2,7 @@ from django.db import models # noqa
 """
 Database models.
 """
+from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import (
     AbstractBaseUser,
@@ -44,3 +45,23 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager() # Na ta način povežemo User Managerja z modelom
 
     USERNAME_FIELD = 'email'
+
+class Recipe(models.Model):
+    """Recipe objects."""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, #relacija na User model --> ker uporabljamo custom User model naredimo referenco rajši preko settingsov (tam smo definirali kateru User model uporabljamo)
+        on_delete=models.CASCADE,
+    )
+
+    #TextField vs CharField
+    #Textfiels je za daljši tekst in podpira večrstično vsebino
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    time_minutes = models.IntegerField()
+    price = models.DecimalField(max_digits=5, decimal_places=2)
+    link = models.CharField(max_length=255, blank=True) #web link do spletne strani recepta
+
+    #String representation of the object
+    #To vpliva tudi kako se prikazuje v Django-Admin (na spletni strani)
+    def __str__(self):
+        return self.title
