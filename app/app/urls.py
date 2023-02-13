@@ -13,9 +13,29 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularSwaggerView,
+)
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+
+    #To spodaj potrebujemo, da omogočimo API dokumentacijo
+
+    #Prvi path bo generiral shemo za naš API (YAML file)
+    path('api/schema/', SpectacularAPIView.as_view(), name='api-schema'),
+
+     #Second path will serve the swagger documentation, that will use our schema
+    #to generate a graphical UI for display of our API documentation
+    path(
+        'api/docs/',
+        SpectacularSwaggerView.as_view(url_name='api-schema'),
+        name='api-docs',
+    ),
+    path('api/user/', include('user.urls')),
 ]
+
+

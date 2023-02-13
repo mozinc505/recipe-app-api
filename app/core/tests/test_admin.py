@@ -15,7 +15,7 @@ class AdminSiteTests(TestCase):
 
     # S setup metodo implementiramo določene modele za določene teste, ki jih dodamo v ta klas
 
-    # OPOMBA: UnitTest modul za Python uporablja drugačno sintakto (snakeCase)
+    # OPOMBA: UnitTest modul za Python uporablja drugačno sintakso (snakeCase)
     def setUp(self):
         """Create user and client."""
         self.client = Client() # To je Django test client
