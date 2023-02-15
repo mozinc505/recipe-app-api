@@ -21,7 +21,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     #Konfiguriramo naš viewset
 
-    serializer_class = serializers.RecipeSerializer
+    serializer_class = serializers.RecipeDetailSerializer #Ta serializer nastavimo kot default (teh akcij bo več)
 
 
     #The queryset represents the objects that were available for this view.
@@ -46,3 +46,39 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Retrieve recipes for authenticated user."""
         return self.queryset.filter(user=self.request.user).order_by('-id')
+
+
+    def get_serializer_class(self):
+        """Return the serializer class for request."""
+
+        #-----------
+        #OPOMBA: Ker želimo, da za seznam vseh receptov uporabimo en serializer, za prikaz "podrobnosti (details)" pa drugega,
+        #to naredimo tako, da override-amo metodo, ki jo DFR uporablja zato, da ugotovi kateri serializer uporabljati
+        #-----------
+
+        """
+        get_serializer_class(self)
+        Returns the class that should be used for the serializer. Defaults to returning the serializer_class attribute.
+        May be overridden to provide dynamic behavior, such as using different serializers for read and write operations,
+        or p#roviding different serializers to different types of users.
+        """
+
+        if self.action == 'list':
+            #It expects that we return a reference to the class, not the object of the class.
+            #Vrnemo referenco na class --> zato ne smemo uporabiti na koncu (), kar naredi nov class (pokliče konstruktor)
+            #DFR bo sam naredil objekt.
+            return serializers.RecipeSerializer
+
+        return self.serializer_class
+
+    """
+    Naredimo methodo s katero novim zapisov nastavimo pravega user-ja (zaradi relacije).
+    Nastavimo na avtenticiranega uporabnika.
+    Override-amo django metodo - we override the behavior for when Django REST Framework saves a model in a viewset.
+    Pomeni:
+    Ko kreiramo nov objekt (Recipe) skozi ta viewset, se bo poklicala ta metoda kot del kreiranja tega objekta (zapisa).
+    Podatki so na tem mestu že validirani s strani serializer-ja.
+    """
+    def perform_create(self, serializer):
+        """Create a new recipe."""
+        serializer.save(user=self.request.user)

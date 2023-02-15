@@ -56,7 +56,7 @@ class Recipe(models.Model):
     #TextField vs CharField
     #Textfiels je za daljši tekst in podpira večrstično vsebino
     title = models.CharField(max_length=255)
-    description = models.TextField(blank=True)
+    description = models.TextField(blank=True) #blank=True pomeni, da je polje neobvezno
     time_minutes = models.IntegerField()
     price = models.DecimalField(max_digits=5, decimal_places=2)
     link = models.CharField(max_length=255, blank=True) #web link do spletne strani recepta
