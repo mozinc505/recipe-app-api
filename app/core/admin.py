@@ -53,3 +53,5 @@ class UserAdmin(BaseUserAdmin):
 #OPOMBA: Če ne specificiramo parametera UserAdmin pomeni, da bo za prikaz User django uporabil default nastavitve prikaza (za add, edit, ...)
 admin.site.register(models.User, UserAdmin)
 admin.site.register(models.Recipe) #Ne potrebujemo še drugega parametra, ker ne specificiramo nek custom class ampak uporabljamo default class za model
+admin.site.register(models.Tag)
+admin.site.register(models.Ingredient)

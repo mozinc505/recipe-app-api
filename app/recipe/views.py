@@ -1,11 +1,18 @@
 """
 Views for the recipes APIs
 """
-from rest_framework import viewsets
+from rest_framework import (
+    viewsets,
+    mixins,
+)
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 
-from core.models import Recipe
+from core.models import (
+    Recipe,
+    Tag,
+    Ingredient,
+)
 from recipe import serializers
 
 
@@ -67,7 +74,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             #It expects that we return a reference to the class, not the object of the class.
             #Vrnemo referenco na class --> zato ne smemo uporabiti na koncu (), kar naredi nov class (pokliče konstruktor)
             #DFR bo sam naredil objekt.
-            return serializers.RecipeSerializer
+            return serializers.RecipeSerializer #Obvezno brez ()
 
         return self.serializer_class
 
@@ -82,3 +89,55 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Create a new recipe."""
         serializer.save(user=self.request.user)
+
+
+class BaseRecipeAttrViewSet(mixins.DestroyModelMixin, #handles DELETE
+                            mixins.UpdateModelMixin, #handles PUT and PATCHES
+                            mixins.ListModelMixin, #handles GET
+                            #RetrieveModelMixin, #handled GET for 1 record/object (details)
+                            viewsets.GenericViewSet): #generic view funcionality
+    """Base viewset for recipe attributes."""
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """Filter queryset to authenticated user."""
+        return self.queryset.filter(user=self.request.user).order_by("-name")
+
+class TagViewSet(BaseRecipeAttrViewSet):
+    """Manage tags in the databaase."""
+
+    #We setup some class-variables:
+    serializer_class = serializers.TagSerializer
+    queryset = Tag.objects.all()
+    #authentication_classes = [TokenAuthentication]
+    #permission_classes = [IsAuthenticated]
+
+    #def get_queryset(self):
+    #    """Filter queryset to authenticated user."""
+    #    return self.queryset.filter(user=self.request.user).order_by("-name")
+
+    """
+    Mixins is just things that you can mix in to a view to add additional functionality.
+    Mixin extend or add ONE specific part of the funcionality.
+
+    #OPOMBA: We through some mixin funcionality to GenericViewSet
+
+    A Mixin is a special kind of inheritance in Python to allow classes to share methods between any class.
+
+    Read this as Mixin1 extends GenericViewSet which is then extended by TagViewSet.
+
+    VIR: https://whiztal.io/mixins-in-django-and-django-rest-framework/
+    """
+
+
+class IngredientViewSet(BaseRecipeAttrViewSet):
+    """Manage ingredients in the database."""
+    serializer_class = serializers.IngredientSerializer
+    queryset = Ingredient.objects.all() #S tem povemo DRF-ju katere modele želimo, da ta viewset obvladuje
+    #authentication_classes = [TokenAuthentication] #S tem dodamo podporo za auth - token-e
+    #permission_classes = [IsAuthenticated] #Določimo, da je za uporabo tega endpointa potrebno biti avtenticiran
+
+    #def get_queryset(self):
+    #    """Filter queryset to authenticated user."""
+    #    return self.queryset.filter(user=self.request.user).order_by("-name")

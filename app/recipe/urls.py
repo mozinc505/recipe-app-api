@@ -14,7 +14,6 @@ from rest_framework.routers import DefaultRouter
 
 from recipe import views
 
-
 router = DefaultRouter()
 
 #Registriramo naš viewset pri tem router-ju z imenom "recipes".
@@ -28,6 +27,8 @@ router = DefaultRouter()
 #It will create and register endpoints for each of those options.
 
 router.register('recipes', views.RecipeViewSet)
+router.register('tags', views.TagViewSet)
+router.register('ingredients', views.IngredientViewSet)
 
 #We define the name which is used to identify the name when we're doing the reverse lookup of URLs.
 app_name = 'recipe'
