@@ -10,6 +10,7 @@ from django.utils.translation import gettext_lazy as _ #S tem se integriraš v d
 #OPOMBA: Naš user admin bomo imenovali UserAdmin, zato smo tega, ki ga uvozimo iz django (osnovnega) uvozili kot BaseUserAdmin
 
 from core import models
+from core.models import User
 
 class UserAdmin(BaseUserAdmin):
     """Define the admin pages for users."""
@@ -44,6 +45,7 @@ class UserAdmin(BaseUserAdmin):
                 'is_active',
                 'is_staff',
                 'is_superuser',
+
             )
         }),
     )

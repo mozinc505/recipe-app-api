@@ -2,6 +2,10 @@ from django.db import models # noqa
 """
 Database models.
 """
+
+import uuid # will be used to generate UID
+import os # we need for file path management
+
 from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import (
@@ -9,6 +13,26 @@ from django.contrib.auth.models import (
     BaseUserManager,
     PermissionsMixin,
 )
+
+
+# Funkcija, ki se bo uporabljala za generiranje poti do slike, ki jo upload-amo
+# So this is the function that is going to be used to generate the path to the image that we upload.
+# PARAM:
+# instance = is the instance of the object the image is being uploaded to
+# filename = the name of the original file that's been uploaded.
+def recipe_image_file_path(instance, filename):
+    """Generate file path for new recipe image."""
+
+    # Odstranimo končnico (stripping off the extension)
+    ext = os.path.splitext(filename)[1]
+
+    # Naredimo svoje ime file-a (pripnemo pa originalno končnico)
+    filename = f'{uuid.uuid4()}{ext}'
+
+    # Kreiramo pot (s funkcijo - join)
+    # Na ta način je pot narejena v pravilni obliki (glede na dovoljene znake)
+    return os.path.join("uploads", "recipe", filename)
+
 
 # Create your models here.
 
@@ -62,7 +86,7 @@ class Recipe(models.Model):
     link = models.CharField(max_length=255, blank=True) #web link do spletne strani recepta
     tags = models.ManyToManyField("Tag")
     ingredients = models.ManyToManyField("Ingredient")
-
+    image = models.ImageField(null=True, upload_to=recipe_image_file_path) # referenca na funkcijo (nismo poklicali/zagnali funkcijo)
     #String representation of the object
     #To vpliva tudi kako se prikazuje v Django-Admin (na spletni strani)
     def __str__(self):

@@ -1,7 +1,16 @@
 """
 Tests for recipe APIs.
 """
+
+# The difference between import and from import in Python is:
+# import imports an entire code library.
+# from import imports a specific member or members of the library.
+
 from decimal import Decimal
+import tempfile
+import os
+
+from PIL import Image #Pillow image library
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -31,6 +40,12 @@ def detail_url(recipe_id):
 
 
 #region HELPER FUNCTIONS
+
+def image_upload_url(recipe_id):
+    """Create and return an image upload URL"""
+    # This is a helper function that allows us to generate the URL to the upload image endpoint.
+    return reverse("recipe:recipe-upload-image", args=[recipe_id])
+
 
 #Create a helpers function for creating Recipe.
 #This will be used for creating a test recipe that we can use with our API.
@@ -497,3 +512,99 @@ class PrivateRecipeApiTests(TestCase):
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(recipe.ingredients.count(), 0)
+
+    def test_filter_by_tags(self):
+        """Filtering recipes by tags."""
+        r1 = create_recipe(user=self.user, title="Thai Vegetable Curry")
+        r2 = create_recipe(user=self.user, title="Aubergine with Tahini")
+        tag1 = Tag.objects.create(user=self.user, name="Vegan")
+        tag2 = Tag.objects.create(user=self.user, name="Vegetarian")
+        r1.tags.add(tag1)
+        r2.tags.add(tag2)
+        r3 = create_recipe(user=self.user, title="Fish and chips")
+
+        # GET request with filter (only recipes with tag1 or tag2)
+        params = {"tags": f"{tag1.id},{tag2.id}"} # f-string --> format string --> so we can pull ids from tags
+        res = self.client.get(RECIPES_URL, params)
+
+        #Naredimo serializirano verzijo teh receptov (takšno obliko bomo uporabili za primerjavo)
+        s1 = RecipeSerializer(r1)
+        s2 = RecipeSerializer(r2)
+        s3 = RecipeSerializer(r3)
+        self.assertIn(s1.data, res.data)
+        self.assertIn(s2.data, res.data)
+        self.assertNotIn(s3.data, res.data)
+
+    def test_filter_by_ingredients(self):
+        """Test filtering recipes by ingredients."""
+        r1 = create_recipe(user=self.user, title='Posh Beans on Toast')
+        r2 = create_recipe(user=self.user, title='Chicken Cacciatore')
+        in1 = Ingredient.objects.create(user=self.user, name='Feta Cheese')
+        in2 = Ingredient.objects.create(user=self.user, name='Chicken')
+        r1.ingredients.add(in1)
+        r2.ingredients.add(in2)
+        r3 = create_recipe(user=self.user, title='Red Lentil Daal')
+
+        params = {'ingredients': f'{in1.id},{in2.id}'}
+        res = self.client.get(RECIPES_URL, params)
+
+        s1 = RecipeSerializer(r1)
+        s2 = RecipeSerializer(r2)
+        s3 = RecipeSerializer(r3)
+        self.assertIn(s1.data, res.data)
+        self.assertIn(s2.data, res.data)
+        self.assertNotIn(s3.data, res.data)
+
+
+# Tests for uploading images
+#
+# Why seperate class?
+# The reason we do that is because we want a specific set up and tear down for each of the different
+# tests that we're going to add for our upload image endpoint.
+class ImageUploadTests(TestCase):
+    """Tests for the image uplead API."""
+
+    # This method runs before the test
+    def setUp(self):
+        self.client = APIClient()
+        self.user = get_user_model().objects.create_user(
+            "user@example.com",
+            "password123",
+        )
+        self.client.force_authenticate(self.user)
+        self.recipe = create_recipe(user=self.user)
+
+    # This method runs after the test
+    def tearDown(self):
+        self.recipe.image.delete() #It deletes the image that was created as a part of a test (clen up). Da se ne nabirajo slike na računalniku.
+
+    def test_upload_image(self):
+        """Test uploading the image to a recipe."""
+        url = image_upload_url(self.recipe.id)
+
+        # Helper module provided by python
+        # It allows you to create a temporary files
+        # Koda spodaj naredi začasno datoteko, ki jo lahko uporabimo
+
+        # So we're using this name temporary file to create a temporary image file
+        # that we can use to test uploading to our endpoint.
+        with tempfile.NamedTemporaryFile(suffix=".jpg") as image_file:
+            img = Image.new("RGB", (10,10)) # Naredimo testno sliko (črn kvadrat 10x10 velikosti) - tukaj je slika samo v memoriji
+            img.save(image_file, format="JPEG") # Shranimo to sliko v file
+            image_file.seek(0) # Se postavimo na začetek file-a  (sicer misli, da smo ga prebrali že do konca) - postavimo seek-pointer na začetek
+            payload = {"image": image_file}
+            res = self.client.post(url, payload, format="multipart") # We upload file using a multipart form (povemo za kakšen tip gre)
+        # When the above code ends it clean up the temporary file for us automaticaly
+
+        self.recipe.refresh_from_db()
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn("image", res.data)
+        self.assertTrue(os.path.exists(self.recipe.image.path)) # Preverimo, da path, ki je naveden na receptu res obstaja v sistemu
+
+    def test_upload_image_bad_request(self):
+        """Test uploading invalid image."""
+        url = image_upload_url(self.recipe.id)
+        payload = {"image": "notanimage"} #Poslali bomo tekst namesto slike (da simuliramo napako)
+        res = self.client.post(url, payload, format="multipart")
+
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)

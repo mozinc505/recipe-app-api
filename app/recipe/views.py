@@ -1,10 +1,19 @@
 """
 Views for the recipes APIs
 """
+from drf_spectacular.utils import (
+    extend_schema_view,
+    extend_schema,
+    OpenApiParameter,
+    OpenApiTypes,
+)
 from rest_framework import (
     viewsets,
     mixins,
+    status,
 )
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 
@@ -15,7 +24,28 @@ from core.models import (
 )
 from recipe import serializers
 
+# S tem razširimo API dokumentacijo, ki jo sicer avtomatično naredi drf_spectacular
+@extend_schema_view(
 
+    # Razširimo schemo za "list" endpoint
+    list=extend_schema(
+
+        # Navedemo parametre, ki jih lahko pošljemo GET metodi ("list endpointu"), ko ga kličemo
+        # We specify the parameters that can be accepted in the API request
+        parameters=[
+            OpenApiParameter(
+                "tags",
+                OpenApiTypes.STR, # string (ker sprejemamo ID-je ločene z vejico v stringu)
+                description="Comma separated list of IDs to filter.",
+            ),
+            OpenApiParameter(
+                "ingredients",
+                OpenApiTypes.STR, # string
+                description="Comma separated list of ingredient IDs to filter."
+            )
+        ]
+    )
+)
 class RecipeViewSet(viewsets.ModelViewSet):
     """View for manage recipe APIs."""
 
@@ -41,6 +71,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
     #And you need to be authenticated.
     permission_classes = [IsAuthenticated]
 
+    # parametri za filtriranje (so podani v obliki comma-separated string)
+    def _params_to_ints(self, qs):
+        """Convert a list to strings to integers"""
+        # Primer: 1,2,3
+        return [int(str_id) for str_id in qs.split(",")]
+
     """
     So now what we're going to do is override the get query set method that's provided by our mode of user.
     If we just implemented this view as it is, it would allow us to manage all of the different recipes
@@ -52,7 +88,25 @@ class RecipeViewSet(viewsets.ModelViewSet):
     #To je metoda, ki jo framework kliče, ko želimo pobrati podatke iz queryseta.
     def get_queryset(self):
         """Retrieve recipes for authenticated user."""
-        return self.queryset.filter(user=self.request.user).order_by('-id')
+        #return self.queryset.filter(user=self.request.user).order_by('-id')
+
+        #Poberemo parametre iz requesta
+        tags = self.request.query_params.get('tags')
+        ingredients = self.request.query_params.get('ingredients')
+
+        # Nastavimo v spremenljivo referenco na queryset - da bomo lahko aplicirali filtre na queryset in potem vrnili rezultat
+        queryset = self.queryset
+
+        if tags:
+            tag_ids = self._params_to_ints(tags)
+            queryset = queryset.filter(tags__id__in=tag_ids) # Sintaksa za filtriranje relacijskih podatkov --> dvojni podčrtaj
+        if ingredients:
+            ingredient_ids = self._params_to_ints(ingredients)
+            queryset = queryset.filter(ingredients__id__in=ingredient_ids)
+
+        return queryset.filter(
+            user=self.request.user
+        ).order_by('-id').distinct()
 
 
     def get_serializer_class(self):
@@ -75,6 +129,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
             #Vrnemo referenco na class --> zato ne smemo uporabiti na koncu (), kar naredi nov class (pokliče konstruktor)
             #DFR bo sam naredil objekt.
             return serializers.RecipeSerializer #Obvezno brez ()
+        elif self.action == "upload_image": # A custom action, ki jo definiramo spodaj
+            return serializers.RecipeImageSerializer
 
         return self.serializer_class
 
@@ -89,6 +145,20 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Create a new recipe."""
         serializer.save(user=self.request.user)
+
+    #Custom action
+    @action(methods=["POST"], detail=True, url_path="upload_image") #detail=True -> indikator, da se akcija nanaša na en zapis tega modela
+    def upload_image(self, request, pk=None):
+        """Upload an image to recipe."""
+        recipe = self.get_object() # Metoda vrne objekt za pk, ki je specificiran v parameteru metode
+        serializer = self.get_serializer(recipe, data=request.data)
+
+        if serializer.is_valid():
+            serializer.save() # S tem shranimo sliko v bazo
+            return Response(serializer.data, status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class BaseRecipeAttrViewSet(mixins.DestroyModelMixin, #handles DELETE

@@ -30,11 +30,15 @@ RUN python -m venv $VIRTUAL_ENV && \
     $VIRTUAL_ENV/bin/pip install --upgrade pip && \
     # inštaliramo postgres client paket - ta mora ostati tudi v produkciji
     # paket, ki ga moramo inštalirati v alpine image-u, da dodamo podporo za postgres
-    apk add --update --no-cache postgresql-client && \
-    # nastavi navidezno odvidnost med paketi (jih grupira skupaj - da jih kasneje lažje odstranimo)
+
+    #OPOMBA: Kar potrebujemo stalno v dockerju --> dodamo v to naslednjo vrstico
+    apk add --update --no-cache postgresql-client jpeg-dev && \
+
+    #OPOMBA: Kar potrebujemo samo ob namestitvi določenih stvari (in jih bomo spodaj odstranili)  damo v tole spodnjo vrstico.
+    # nastavi navidezno odvisnost med paketi (jih grupira skupaj - da jih kasneje lažje odstranimo)
     apk add --update --no-cache --virtual .tmp-build-deps \
         # povemo katere pakete potrebujemo za inštaliranje postgres adapterja
-        build-base postgresql-dev musl-dev && \
+        build-base postgresql-dev musl-dev zlib zlib-dev && \
     $VIRTUAL_ENV/bin/pip install -r /tmp/requirements.txt && \
     if [ $DEV = "true" ]; \
         then $VIRTUAL_ENV/bin/pip install -r /tmp/requirements.dev.txt ; \
@@ -46,7 +50,16 @@ RUN python -m venv $VIRTUAL_ENV && \
     adduser \
         --disabled-password \
         --no-create-home \
-        django-user
+        django-user && \
+    # naredimo direktorij (parameter -p uporabimo, da naredi vse poddirektorije v direktoriju, ki smo ga specificirali)
+    mkdir -p /vol/web/media && \
+    mkdir -p /vol/web/static && \
+    # sprememnimo lastnika direktorija vol in vseh pod-direktorijev (chown --> change owner, -R == recursive)
+    # So we're setting the owner to Django user and the group to Django user.
+    # Razlog: da bo imel django-user pravico spreminjati vsebino direktorija, ko se bo aplikacija izvajala
+    chown -R django-user:django-user /vol && \
+    # chmod == change mode --> spreminjamo pravice na tem direktoriju
+    chmod -R 755 /vol
 
 
 #ENV PATH="/py/bin:$PATH"

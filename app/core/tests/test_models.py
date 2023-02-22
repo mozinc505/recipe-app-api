@@ -1,6 +1,8 @@
 """
 Tests for models.
 """
+
+from unittest.mock import patch #This is the tool we use to mock things (replace behaviour for the purpose of testing)
 from decimal import Decimal
 
 from django.test import TestCase
@@ -102,3 +104,24 @@ class ModelTests(TestCase):
         )
 
         self.assertEqual(str(ingredient), ingredient.name)
+
+
+    #Z @patch ukazom samo posnemamo funkcionalnoste te metode
+    #Za potrebe testiranja nočemo, da uuid metoda naredi dolg unique string (ker je težje debugairat)
+    @patch("core.models.uuid.uuid4")
+    def test_recipe_file_name_uuid(self, mock_uuid):
+        """Test generating image path."""
+
+        """
+        And this is going to be the unit test for the functionality or the function that we're going to create
+        for creating the path to the file on the system.
+        """
+
+        #Vsak upload-an file bo dobil uuid ime - da bodo imena enolična
+        uuid = "test-uuid" # S tem posnemamo obnašanje funkcije
+        mock_uuid.return_value = uuid
+
+        # A function that generates the path to the image that is being uploaded.
+        file_path = models.recipe_image_file_path(None, "example.jpg")
+
+        self.assertEqual(file_path, f'uploads/recipe/{uuid}.jpg')

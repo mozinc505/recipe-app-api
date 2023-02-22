@@ -139,8 +139,29 @@ class RecipeDetailSerializer(RecipeSerializer):
     """Serializer for Recipe detail view."""
 
     class Meta(RecipeSerializer.Meta): #We pass all the metadata from RecipeSerializer
-        fields = RecipeSerializer.Meta.fields + ['description']
+        fields = RecipeSerializer.Meta.fields + ['description', 'image']
 
 
+class RecipeImageSerializer(serializers.ModelSerializer):
+    """Serializer for uploading images to recipes."""
 
+    """
+    Here we're creating a separate serializer and the reason we're trying to
+    separate serialize it is because when we upload images we only need to accepts the image field.
+    """
+
+    """
+    We're doing this as a separate API, and the reason why we do it as a separate API is because it's best
+    practice to only upload one type of data to an API.
+    So we don't want to be uploading a form data which contains all the form data of a recipe as well as
+    an image.
+
+    We want to have a specific separate API just for handling the image upload to make our API data structures
+    clean and easy to use and understand.
+    """
+    class Meta:
+        model = Recipe
+        fields = ["id", "image"]
+        read_only_fields = ["id"]
+        extra_kwargs = {"image": {"required": "True"}}
 
