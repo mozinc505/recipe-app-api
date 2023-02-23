@@ -78,7 +78,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return [int(str_id) for str_id in qs.split(",")]
 
     """
-    So now what we're going to do is override the get query set method that's provided by our mode of user.
+    So now what we're going to do is override the get queryset method that's provided by our model of user.
     If we just implemented this view as it is, it would allow us to manage all of the different recipes
     in the system.
     But we want to make sure that those recipes are filtered down to the authenticated user.
@@ -95,6 +95,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         ingredients = self.request.query_params.get('ingredients')
 
         # Nastavimo v spremenljivo referenco na queryset - da bomo lahko aplicirali filtre na queryset in potem vrnili rezultat
+        # Kot izhodišče vzamemo queryset, ki smo ga zgoraj nastavili in ki vsebuje vse "zapise" - potem pa ga sfiltriramo
         queryset = self.queryset
 
         if tags:
@@ -159,8 +160,18 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
-
+#Za potrebe dopolnitve swagger dokumentacije (da poveš, da so možni opcijski filtri pri klicu tega "list" (GET) endpointa)
+@extend_schema_view(
+    list=extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "assigned_only",
+                OpenApiTypes.INT, enum=[0, 1], #Omejimo nabor podatkov, ki jih sprejmemo na 0 in 1
+                description = "Filter by items assigned to recipes.",
+            ),
+        ]
+    )
+)
 class BaseRecipeAttrViewSet(mixins.DestroyModelMixin, #handles DELETE
                             mixins.UpdateModelMixin, #handles PUT and PATCHES
                             mixins.ListModelMixin, #handles GET
@@ -172,7 +183,17 @@ class BaseRecipeAttrViewSet(mixins.DestroyModelMixin, #handles DELETE
 
     def get_queryset(self):
         """Filter queryset to authenticated user."""
-        return self.queryset.filter(user=self.request.user).order_by("-name")
+        #return self.queryset.filter(user=self.request.user).order_by("-name")
+        assigned_only = bool(
+            int(self.request.query_params.get('assigned_only', 0)) # Default=0
+        )
+        queryset = self.queryset # PAZI: lokalna tabela z istim imenom (Pri pythonu s tem ne spremeniš globalne spremenljivke)
+        if assigned_only:
+            queryset = queryset.filter(recipe__isnull=False) # Sintaksa za filtre na relacijskih tabelah
+
+        return queryset.filter( #POZOR: ni self.queryset, ker je to druga (globalna) spremenljivka. Podatke smo pa pripravili v lokalni spremenljivki.
+            user=self.request.user
+        ).order_by('-name').distinct()
 
 class TagViewSet(BaseRecipeAttrViewSet):
     """Manage tags in the databaase."""

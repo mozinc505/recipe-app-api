@@ -3,3 +3,4 @@ djangorestframework>=3.12.4,<3.13 #Django REST Framework
 psycopg2>=2.8.6,<2.9 #For postgresql DB
 drf-spectacular>=0.15.1,<0.16 #Schema generator
 Pillow>=8.2.0,<8.3.0 #Imaging library
+uwsgi>=2.0.19<2.1
