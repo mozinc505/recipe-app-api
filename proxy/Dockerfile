@@ -11,7 +11,7 @@
 FROM nginxinc/nginx-unprivileged:1-alpine
 
 # Maintainer == to so samo metapodatki o image-u (ki se bo naredil iz tega dockerfile-a)
-LABEL maintainer="minoadeveloper.com"
+LABEL maintainer="minoa.si"
 
 # Kopiramo file iz hosta v docker image
 COPY ./default.conf.tpl /etc/nginx/default.conf.tpl
@@ -69,7 +69,7 @@ VOLUME /vol/static
 #
 # And whatever user is the last user to switch to when we're building our docket image will be the user
 # that is used to run the application.
-USER nginx
+#USER nginx
 
 # So this is the default script that's going to be run when you create instances from this image and we're
 # simply calling our run to our site scripts that we copied to the image further above.

@@ -21,12 +21,29 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-c=*8s-_92*me04!lu8nbr2rnp@r4cqvvms5oy6em=*w+ip4wd0'
+
+# This will retrieve from the configured environment variables the variable called
+# secret key and it will set it as the secret key in the settings.py file.
+SECRET_KEY = os.environ.get("SECRET_KEY", "changeme") # Default value = changeme
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Ali gre za DEBUG mode ali DEPLOY mode (nastavimo iz ENV spremenljivke)
+# bool(in(konverzija)) --> environment variables so lahko samo tipa "string" --> zato moramo konvertirati podatke
+DEBUG = bool(int(os.environ.get("DEBUG", 0))) # Default = 0 (false)
 
-ALLOWED_HOSTS = []
+# We need to configure allowed hosts.
+# Allowed hosts is a security mechanism that ensures that your Django app is only accessible via specific host names.
+#
+# We're going to accept a comma separated list of hostnames and we're going to add all of them to the allowed hosts.
+ALLOWED_HOSTS = [] # Default = brez omejitev
+
+#Extend list
+ALLOWED_HOSTS.extend(
+    filter(
+        None,
+        os.environ.get('ALLOWED_HOSTS', '').split(','),
+    )
+)
 
 
 # Application definition
@@ -132,7 +149,7 @@ STATIC_URL = '/static/static/'
 MEDIA_URL = '/static/media/'
 
 MEDIA_ROOT = '/vol/web/media'
-STATIC_ROOT = 'vol/web/static'
+STATIC_ROOT = '/vol/web/static'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field

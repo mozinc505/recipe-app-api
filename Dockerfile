@@ -8,8 +8,8 @@ ENV PYTHONUNBUFFERED 1
 
 #VIRTUAL ENVIRONMENT
 #We can replace activate venv by setting the appropriate environment variables: VIRTUAL_ENV and PATH
-ENV VIRTUAL_ENV=/py
-ENV PATH="/scripts:$VIRTUAL_ENV/bin:$PATH"
+#ENV VIRTUAL_ENV=/py
+#ENV PATH="/scripts:$VIRTUAL_ENV/bin:$PATH"
 
 #Komanda s katero kopiramo datoteke iz docker hosta (mac ali pc) v docker image.
 COPY ./requirements.txt /tmp/requirements.txt
@@ -26,14 +26,15 @@ COPY ./app /app
 WORKDIR /app
 #Določimo preko katerega porta bomo komunicirali s containerjem
 #S tem ukazom (EXPOSE) odpremo port drugim docker containerjem
+#Na ta način določimo kateri port container posluša
 EXPOSE 8000
 
 ARG DEV=false
 
 #Uporabimo RUN commando s katero inštaliramo aplikacije in packages, ki želimo da so del image-a.
 #OPOMBA: Komande se izvedejo samo, ko kreiramo docker image (Docker build)
-RUN python -m venv $VIRTUAL_ENV && \
-    $VIRTUAL_ENV/bin/pip install --upgrade pip && \
+RUN python -m venv /py && \
+    /py/bin/pip install --upgrade pip && \
     # inštaliramo postgres client paket - ta mora ostati tudi v produkciji
     # paket, ki ga moramo inštalirati v alpine image-u, da dodamo podporo za postgres
 
@@ -45,9 +46,9 @@ RUN python -m venv $VIRTUAL_ENV && \
     apk add --update --no-cache --virtual .tmp-build-deps \
         # povemo katere pakete potrebujemo za inštaliranje postgres adapterja
         build-base postgresql-dev musl-dev zlib zlib-dev linux-headers && \
-    $VIRTUAL_ENV/bin/pip install -r /tmp/requirements.txt && \
+    /py/bin/pip install -r /tmp/requirements.txt && \
     if [ $DEV = "true" ]; \
-        then $VIRTUAL_ENV/bin/pip install -r /tmp/requirements.dev.txt ; \
+        then /py/bin/pip install -r /tmp/requirements.dev.txt ; \
     fi && \
     rm -rf /tmp && \
     # odstranimo pakete, ki smo jih zgoraj dodali (jih pocistimo)
@@ -72,7 +73,7 @@ RUN python -m venv $VIRTUAL_ENV && \
 
 
 #ENV PATH="/py/bin:$PATH"
-#ENV PATH="/scripts:/py/bin:$PATH"
+ENV PATH="/scripts:/py/bin:$PATH"
 
 USER django-user
 
@@ -83,6 +84,8 @@ USER django-user
 
 # You can override this using Docker compose, and we will be overriding it for our development server
 # because our development server is going to be using our managed API run server command instead of WSGI.
+#
+# The CMD command tells Docker how to run the application we packaged in the image.
 CMD ["run.sh"]
 
 #Navodila: https://linuxhint.com/understand_dockerfile/

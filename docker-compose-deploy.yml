@@ -1,0 +1,47 @@
+#Special dockerfile just for deployment
+version: "3.9"
+
+services:
+  app: # We have a service called "app"
+    #image: recipe-deploy-api-app
+    build:
+      context: . # Build context nastavimo na root (ta service bomo zaganjali z root-a)
+    #restart: always # Ce se service sesuje se avtomatično ponovno zažene (ne rabiš ročno zagnati aplikacije/servica)
+    volumes:
+      - static-data:/vol/web
+    environment: #This is the configuration of our running service (environment variables)
+      - DB_HOST=db # The name of a db service (ki je kreiran spodaj)
+      - DB_NAME=${DB_NAME} # Ime baze, ki ga bomo vzeli iz .env datoteke
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - SECRET_KEY=${DJANGO_SECRET_KEY}
+      - ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS}
+    depends_on: # Od katerega servica je ta servis odvisen (kateri servisi se morajo prej zagnati)
+      - db
+
+  db: # Database servis
+    image: postgres:13-alpine
+    restart: always
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASS}
+
+  proxy: # Reverse proxy servis
+    #image: recipe-deploy-api-proxy
+    build:
+      context: ./proxy # We want to build this particular image for this service from the proxy directory. We don't want to use our app. We want to use the proxy.
+    restart: always
+    depends_on:
+      - app # So all the requests come through the proxy and they get forwarded to the app if necessary. So the proxy depends on the app service running before our proxy is started.
+    ports:
+      - 80:8000 # That's going to be port at on the local machine, which will be port 80 on the server. So port 8000 inside our container.
+      #- 8000:8000 # Samo za testiranje na lokalni mašini (ker je port 80 verjetno že zaseden)
+    volumes:
+      - static-data:/vol/static
+
+volumes:
+  postgres-data:
+  static-data: # We're using the same volume for the app and the proxy service. And what this means is any data in this is going to be accessible to both.
