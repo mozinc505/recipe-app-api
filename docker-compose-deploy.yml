@@ -6,7 +6,7 @@ services:
     #image: recipe-deploy-api-app
     build:
       context: . # Build context nastavimo na root (ta service bomo zaganjali z root-a)
-    #restart: always # Ce se service sesuje se avtomatično ponovno zažene (ne rabiš ročno zagnati aplikacije/servica)
+    restart: always # Ce se service sesuje se avtomatično ponovno zažene (ne rabiš ročno zagnati aplikacije/servica)
     volumes:
       - static-data:/vol/web
     environment: #This is the configuration of our running service (environment variables)
